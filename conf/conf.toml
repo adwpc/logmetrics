@@ -1,0 +1,9 @@
+listen=":8090"
+
+[log.1]
+path="./1.log"
+
+[log.2]
+path="./2.log"
+
+
