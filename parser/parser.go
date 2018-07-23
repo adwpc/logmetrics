@@ -16,12 +16,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// const (
-// METRIC_GAUGE     = "gauge"
-// METRIC_COUNTER   = "counter"
-// METRIC_HISTOGRAM = "histogram"
-// )
-
 var (
 	log = zlog.Log
 )
@@ -92,7 +86,6 @@ func Run(l conf.Log) error {
 			var val string
 			var err error
 			if val, err = jsonparser.GetString([]byte(jsons[i]), "type"); err != nil {
-				log.Error().Msg("get type error  json=" + jsons[i])
 				continue
 			}
 			if val != model.METRIC_GAUGE && val != model.METRIC_COUNTER && val != model.METRIC_HISTOGRAM {
