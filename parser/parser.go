@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -10,17 +9,18 @@ import (
 
 	"github.com/adwpc/logmetrics/conf"
 	"github.com/adwpc/logmetrics/metrics"
+	"github.com/adwpc/logmetrics/model"
 	"github.com/adwpc/logmetrics/zlog"
 	"github.com/buger/jsonparser"
 	"github.com/hpcloud/tail"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const (
-	METRIC_GAUGE     = "gauge"
-	METRIC_COUNTER   = "counter"
-	METRIC_HISTOGRAM = "histogram"
-)
+// const (
+// METRIC_GAUGE     = "gauge"
+// METRIC_COUNTER   = "counter"
+// METRIC_HISTOGRAM = "histogram"
+// )
 
 var (
 	log = zlog.Log
@@ -42,7 +42,6 @@ type LogJson struct {
 }
 
 func (j *LogJson) GetKV(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
-	fmt.Printf("---------Key: '%s'------- Value: '%s'--------- Type: %s\n", string(key), string(value), dataType)
 	//{"interface_alart":"1", "type":"counter", "alert":"l-cltvprocess-work1.vps.dev.ten.dm offline"}
 	switch string(key) {
 	case "type":
@@ -96,7 +95,7 @@ func Run(l conf.Log) error {
 				log.Error().Msg("get type error  json=" + jsons[i])
 				continue
 			}
-			if val != METRIC_GAUGE && val != METRIC_COUNTER && val != METRIC_HISTOGRAM {
+			if val != model.METRIC_GAUGE && val != model.METRIC_COUNTER && val != model.METRIC_HISTOGRAM {
 				log.Error().Msg("type is invalid" + jsons[i])
 				continue
 			}
@@ -104,11 +103,7 @@ func Run(l conf.Log) error {
 			if err = jsonparser.ObjectEach([]byte(jsons[i]), j.GetKV); err != nil {
 				log.Error().Msg("jsonparser.ObjectEach failed : " + err.Error() + "   " + jsons[i])
 			}
-			switch j.Type {
-			case METRIC_COUNTER:
-				log.Debug().Msg(j.ValKey)
-				metrics.Get(j.ValKey, j.Alert).Deal(j.ValValue)
-			}
+			metrics.Get(j.ValKey, j.Type, j.Alert).Deal(j.ValValue)
 		}
 	}
 

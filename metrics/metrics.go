@@ -3,6 +3,7 @@ package metrics
 import (
 	"sync"
 
+	"github.com/adwpc/logmetrics/model"
 	"github.com/adwpc/logmetrics/zlog"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -51,19 +52,28 @@ var (
 	mutex sync.Mutex
 )
 
-func Get(key string, alert string) PromInterface {
+func Get(key string, tp string, alert string) PromInterface {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if pool == nil {
 		pool = make(map[string]PromInterface)
 	}
 	if _, ok := pool[key]; !ok {
-		pool[key] = NewCounter(key, alert)
+		switch tp {
+		case model.METRIC_COUNTER:
+			pool[key] = NewCounter(key, alert)
+		case model.METRIC_GAUGE:
+			pool[key] = NewGauge(key, alert)
+		case model.METRIC_HISTOGRAM:
+			pool[key] = NewHistogram(key, alert)
+		default:
+			log.Error().Msg("Get default")
+
+		}
 	}
 	return pool[key]
 }
 
-// func NewCounter(namespace string, subSystem string, name string, help string) *prometheus.Counter {
 func NewCounter(name string, alert string) *Counter {
 	m := make(map[string]string)
 	m["alert"] = alert
@@ -80,6 +90,44 @@ func NewCounter(name string, alert string) *Counter {
 
 	return &Counter{
 		c: c,
+	}
+}
+
+func NewGauge(name string, alert string) *Gauge {
+	m := make(map[string]string)
+	m["alert"] = alert
+	c := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name:        name,
+			Help:        "help",
+			ConstLabels: m,
+		})
+	if c == nil {
+		log.Error().Msg("c == nil")
+	}
+	prometheus.MustRegister(c)
+
+	return &Gauge{
+		g: c,
+	}
+}
+
+func NewHistogram(name string, alert string) *Histogram {
+	m := make(map[string]string)
+	m["alert"] = alert
+	c := prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:        name,
+			Help:        "help",
+			ConstLabels: m,
+		})
+	if c == nil {
+		log.Error().Msg("c == nil")
+	}
+	prometheus.MustRegister(c)
+
+	return &Histogram{
+		h: c,
 	}
 }
 
