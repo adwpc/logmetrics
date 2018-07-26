@@ -40,6 +40,7 @@ type Counter interface {
 	// Add adds the given value to the counter. It panics if the value is <
 	// 0.
 	Add(float64)
+	SetLabel(string, string)
 }
 
 // CounterOpts is an alias for Opts. See there for doc comments.
@@ -78,6 +79,14 @@ type counter struct {
 	desc *Desc
 
 	labelPairs []*dto.LabelPair
+}
+
+func (c *counter) SetLabel(key, val string) {
+	for i := 0; i < len(c.labelPairs); i++ {
+		if c.labelPairs[i].GetName() == key {
+			*c.labelPairs[i].Value = val
+		}
+	}
 }
 
 func (c *counter) Desc() *Desc {

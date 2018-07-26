@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/adwpc/logmetrics/model"
+	"github.com/adwpc/logmetrics/prometheus/client_golang/prometheus"
 	"github.com/adwpc/logmetrics/zlog"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -14,15 +14,27 @@ var (
 
 type PromInterface interface {
 	Deal(float64)
+	SetAlert(string)
 }
 
 type Counter struct {
 	c prometheus.Counter
 }
 
+// func (c *Counter) Deal(v float64) {
+// if c.c != nil {
+// c.c.Add(v)
+// }
+// }
 func (c *Counter) Deal(v float64) {
 	if c.c != nil {
 		c.c.Add(v)
+	}
+}
+
+func (c *Counter) SetAlert(a string) {
+	if c.c != nil {
+		c.c.SetLabel("alert", a)
 	}
 }
 
@@ -36,8 +48,20 @@ func (g *Gauge) Deal(v float64) {
 	}
 }
 
+func (g *Gauge) SetAlert(a string) {
+	if g.g != nil {
+		g.g.SetLabel("alert", a)
+	}
+}
+
 type Histogram struct {
 	h prometheus.Histogram
+}
+
+func (h *Histogram) SetAlert(a string) {
+	if h.h != nil {
+		h.h.SetLabel("alert", a)
+	}
 }
 
 func (h *Histogram) Deal(v float64) {
@@ -71,12 +95,15 @@ func Get(key string, tp string, alert string) PromInterface {
 
 		}
 	}
+	pool[key].SetAlert(alert)
 	return pool[key]
 }
 
 func NewCounter(name string, alert string) *Counter {
 	m := make(map[string]string)
-	m["alert"] = alert
+	if alert != "" {
+		m["alert"] = alert
+	}
 	c := prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name:        name,
@@ -95,7 +122,9 @@ func NewCounter(name string, alert string) *Counter {
 
 func NewGauge(name string, alert string) *Gauge {
 	m := make(map[string]string)
-	m["alert"] = alert
+	if alert != "" {
+		m["alert"] = alert
+	}
 	c := prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name:        name,
@@ -114,7 +143,9 @@ func NewGauge(name string, alert string) *Gauge {
 
 func NewHistogram(name string, alert string) *Histogram {
 	m := make(map[string]string)
-	m["alert"] = alert
+	if alert != "" {
+		m["alert"] = alert
+	}
 	c := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:        name,
@@ -129,20 +160,4 @@ func NewHistogram(name string, alert string) *Histogram {
 	return &Histogram{
 		h: c,
 	}
-}
-
-// func NewHistogram(histogram *prometheus.Histogram, namespace string,
-// subSystem string, name string, help string) {
-
-// *histogram = prometheus.NewHistogram(
-// prometheus.HistogramOpts{
-// Namespace: namespace,
-// Subsystem: subSystem,
-// Name:      name,
-// Help:      help,
-// Buckets:   DefBuckets,
-// })
-// prometheus.MustRegister(*histogram)
-// }
-type Metrics struct {
 }

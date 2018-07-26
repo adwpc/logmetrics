@@ -45,6 +45,7 @@ type Histogram interface {
 
 	// Observe adds a single observation to the histogram.
 	Observe(float64)
+	SetLabel(string, string)
 }
 
 // bucketLabel is used for the label that defines the upper bound of a
@@ -224,6 +225,14 @@ type histogram struct {
 	counts      []uint64
 
 	labelPairs []*dto.LabelPair
+}
+
+func (h *histogram) SetLabel(key, val string) {
+	for i := 0; i < len(h.labelPairs); i++ {
+		if h.labelPairs[i].GetName() == key {
+			*h.labelPairs[i].Value = val
+		}
+	}
 }
 
 func (h *histogram) Desc() *Desc {

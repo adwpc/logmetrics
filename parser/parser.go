@@ -10,10 +10,10 @@ import (
 	"github.com/adwpc/logmetrics/conf"
 	"github.com/adwpc/logmetrics/metrics"
 	"github.com/adwpc/logmetrics/model"
+	"github.com/adwpc/logmetrics/prometheus/client_golang/prometheus/promhttp"
 	"github.com/adwpc/logmetrics/zlog"
 	"github.com/buger/jsonparser"
 	"github.com/hpcloud/tail"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (

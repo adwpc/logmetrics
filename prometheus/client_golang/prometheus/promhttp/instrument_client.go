@@ -17,7 +17,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/adwpc/logmetrics/prometheus/client_golang/prometheus"
 )
 
 // The RoundTripperFunc type is an adapter to allow the use of ordinary

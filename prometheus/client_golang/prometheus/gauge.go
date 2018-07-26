@@ -50,6 +50,8 @@ type Gauge interface {
 
 	// SetToCurrentTime sets the Gauge to the current Unix time in seconds.
 	SetToCurrentTime()
+
+	SetLabel(string, string)
 }
 
 // GaugeOpts is an alias for Opts. See there for doc comments.
@@ -85,6 +87,14 @@ type gauge struct {
 
 	desc       *Desc
 	labelPairs []*dto.LabelPair
+}
+
+func (g *gauge) SetLabel(key, val string) {
+	for i := 0; i < len(g.labelPairs); i++ {
+		if g.labelPairs[i].GetName() == key {
+			*g.labelPairs[i].Value = val
+		}
+	}
 }
 
 func (g *gauge) Desc() *Desc {
