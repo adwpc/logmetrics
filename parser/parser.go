@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/adwpc/logmetrics/conf"
@@ -22,9 +23,22 @@ var (
 
 func Monitor(c *conf.Config) {
 	for _, v := range c.Logs {
-		go Run(v)
+		go RunParseLog(v)
 	}
-	http.Handle("/metrics", promhttp.Handler())
+	// http.Handle("/metrics", promhttp.Handler())
+	// log.Fatal().Msg(http.ListenAndServe(c.Listen, nil).Error())
+	var before, after sync.Once
+	h := promhttp.Handler()
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		before.Do(func() {
+			metrics.FirstReport()
+		})
+		h.ServeHTTP(w, r)
+		after.Do(func() {
+			metrics.FirstReportNext()
+		})
+	})
+
 	log.Fatal().Msg(http.ListenAndServe(c.Listen, nil).Error())
 }
 
@@ -54,7 +68,7 @@ func (j *LogJson) GetKV(key []byte, value []byte, dataType jsonparser.ValueType,
 
 }
 
-func Run(l conf.Log) error {
+func RunParseLog(l conf.Log) error {
 
 	if l.Path == "" {
 		log.Error().Msg("path == \"\"")

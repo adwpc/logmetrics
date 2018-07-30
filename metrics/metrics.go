@@ -15,20 +15,37 @@ var (
 type PromInterface interface {
 	Deal(float64)
 	SetAlert(string)
+	SetFirstReport()
+	SetFirstReportNext()
 }
 
 type Counter struct {
-	c prometheus.Counter
+	c           prometheus.Counter
+	firstReport bool
+	val         []float64
 }
 
-// func (c *Counter) Deal(v float64) {
-// if c.c != nil {
-// c.c.Add(v)
-// }
-// }
+func (c *Counter) SetFirstReport() {
+	c.firstReport = true
+	if len(c.val) > 0 {
+		c.c.Add(c.val[0])
+	}
+}
+
+func (c *Counter) SetFirstReportNext() {
+	for i := 1; i < len(c.val); i++ {
+		c.c.Add(c.val[i])
+	}
+}
+
 func (c *Counter) Deal(v float64) {
 	if c.c != nil {
-		c.c.Add(v)
+		if c.firstReport {
+			c.c.Add(v)
+		} else {
+			c.val = append(c.val, v)
+		}
+
 	}
 }
 
@@ -40,6 +57,12 @@ func (c *Counter) SetAlert(a string) {
 
 type Gauge struct {
 	g prometheus.Gauge
+}
+
+func (g *Gauge) SetFirstReport() {
+}
+
+func (g *Gauge) SetFirstReportNext() {
 }
 
 func (g *Gauge) Deal(v float64) {
@@ -56,6 +79,12 @@ func (g *Gauge) SetAlert(a string) {
 
 type Histogram struct {
 	h prometheus.Histogram
+}
+
+func (h *Histogram) SetFirstReport() {
+}
+
+func (h *Histogram) SetFirstReportNext() {
 }
 
 func (h *Histogram) SetAlert(a string) {
@@ -75,6 +104,24 @@ var (
 	pool  map[string]PromInterface
 	mutex sync.Mutex
 )
+
+func FirstReport() {
+	mutex.Lock()
+	defer mutex.Unlock()
+	for _, v := range pool {
+		v.SetFirstReport()
+	}
+	log.Info().Msg("metrics.FirstReport")
+}
+
+func FirstReportNext() {
+	mutex.Lock()
+	defer mutex.Unlock()
+	for _, v := range pool {
+		v.SetFirstReportNext()
+	}
+	log.Info().Msg("metrics.FirstReportNext")
+}
 
 func Get(key string, tp string, alert string) PromInterface {
 	mutex.Lock()
