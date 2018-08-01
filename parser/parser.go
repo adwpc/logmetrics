@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/adwpc/logmetrics/conf"
@@ -25,18 +24,11 @@ func Monitor(c *conf.Config) {
 	for _, v := range c.Logs {
 		go RunParseLog(v)
 	}
-	// http.Handle("/metrics", promhttp.Handler())
-	// log.Fatal().Msg(http.ListenAndServe(c.Listen, nil).Error())
-	var before, after sync.Once
 	h := promhttp.Handler()
 	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		before.Do(func() {
-			metrics.FirstReport()
-		})
+		metrics.FirstReport()
 		h.ServeHTTP(w, r)
-		after.Do(func() {
-			metrics.FirstReportNext()
-		})
+		metrics.FirstReportNext()
 	})
 
 	log.Fatal().Msg(http.ListenAndServe(c.Listen, nil).Error())
@@ -96,7 +88,6 @@ func RunParseLog(l conf.Log) error {
 		r, _ := regexp.Compile("{.*?}")
 		jsons := r.FindAllString(msg.Text, -1)
 		for i := 0; i < len(jsons); i++ {
-			// log.Info().Msg(jsons[i])
 			var val string
 			var err error
 			if val, err = jsonparser.GetString([]byte(jsons[i]), "type"); err != nil {
@@ -109,8 +100,13 @@ func RunParseLog(l conf.Log) error {
 			var j LogJson
 			if err = jsonparser.ObjectEach([]byte(jsons[i]), j.GetKV); err != nil {
 				log.Error().Msg("jsonparser.ObjectEach failed : " + err.Error() + "   " + jsons[i])
+				continue
 			}
-			metrics.Get(j.ValKey, j.Type, j.Alert).Deal(j.ValValue)
+			if j.ValKey != "" && j.Type != "" {
+				metrics.Get(j.ValKey, j.Type, j.Alert).Deal(j.ValValue)
+			} else {
+				log.Error().Msg(jsons[i])
+			}
 		}
 	}
 

@@ -36,6 +36,7 @@ func (c *Counter) SetFirstReportNext() {
 	for i := 1; i < len(c.val); i++ {
 		c.c.Add(c.val[i])
 	}
+	c.val = nil
 }
 
 func (c *Counter) Deal(v float64) {
@@ -111,7 +112,6 @@ func FirstReport() {
 	for _, v := range pool {
 		v.SetFirstReport()
 	}
-	log.Info().Msg("metrics.FirstReport")
 }
 
 func FirstReportNext() {
@@ -120,7 +120,6 @@ func FirstReportNext() {
 	for _, v := range pool {
 		v.SetFirstReportNext()
 	}
-	log.Info().Msg("metrics.FirstReportNext")
 }
 
 func Get(key string, tp string, alert string) PromInterface {
