@@ -13,90 +13,37 @@ var (
 )
 
 type PromInterface interface {
-	Deal(float64)
-	SetAlert(string)
-	SetFirstReport()
-	SetFirstReportNext()
+	Deal(float64, string)
 }
 
 type Counter struct {
-	c           prometheus.Counter
+	c           *prometheus.CounterVec
 	firstReport bool
-	val         []float64
 }
 
-func (c *Counter) SetFirstReport() {
-	c.firstReport = true
-	if len(c.val) > 0 {
-		c.c.Add(c.val[0])
-	}
-}
-
-func (c *Counter) SetFirstReportNext() {
-	for i := 1; i < len(c.val); i++ {
-		c.c.Add(c.val[i])
-	}
-	c.val = nil
-}
-
-func (c *Counter) Deal(v float64) {
+func (c *Counter) Deal(v float64, alert string) {
 	if c.c != nil {
-		if c.firstReport {
-			c.c.Add(v)
-		} else {
-			c.val = append(c.val, v)
-		}
-
-	}
-}
-
-func (c *Counter) SetAlert(a string) {
-	if c.c != nil {
-		c.c.SetLabel("alert", a)
+		c.c.With(prometheus.Labels{"alert": alert}).Add(v)
 	}
 }
 
 type Gauge struct {
-	g prometheus.Gauge
+	g *prometheus.GaugeVec
 }
 
-func (g *Gauge) SetFirstReport() {
-}
-
-func (g *Gauge) SetFirstReportNext() {
-}
-
-func (g *Gauge) Deal(v float64) {
+func (g *Gauge) Deal(v float64, alert string) {
 	if g.g != nil {
-		g.g.Set(v)
-	}
-}
-
-func (g *Gauge) SetAlert(a string) {
-	if g.g != nil {
-		g.g.SetLabel("alert", a)
+		g.g.With(prometheus.Labels{"alert": alert}).Set(v)
 	}
 }
 
 type Histogram struct {
-	h prometheus.Histogram
+	h *prometheus.HistogramVec
 }
 
-func (h *Histogram) SetFirstReport() {
-}
-
-func (h *Histogram) SetFirstReportNext() {
-}
-
-func (h *Histogram) SetAlert(a string) {
+func (h *Histogram) Deal(v float64, alert string) {
 	if h.h != nil {
-		h.h.SetLabel("alert", a)
-	}
-}
-
-func (h *Histogram) Deal(v float64) {
-	if h.h != nil {
-		h.h.Observe(v)
+		h.h.With(prometheus.Labels{"alert": alert}).Observe(v)
 	}
 }
 
@@ -105,22 +52,6 @@ var (
 	pool  map[string]PromInterface
 	mutex sync.Mutex
 )
-
-func FirstReport() {
-	mutex.Lock()
-	defer mutex.Unlock()
-	for _, v := range pool {
-		v.SetFirstReport()
-	}
-}
-
-func FirstReportNext() {
-	mutex.Lock()
-	defer mutex.Unlock()
-	for _, v := range pool {
-		v.SetFirstReportNext()
-	}
-}
 
 func Get(key string, tp string, alert string) PromInterface {
 	mutex.Lock()
@@ -131,31 +62,29 @@ func Get(key string, tp string, alert string) PromInterface {
 	if _, ok := pool[key]; !ok {
 		switch tp {
 		case model.METRIC_COUNTER:
-			pool[key] = NewCounter(key, alert)
+			pool[key] = NewCounter(key)
 		case model.METRIC_GAUGE:
-			pool[key] = NewGauge(key, alert)
+			pool[key] = NewGauge(key)
 		case model.METRIC_HISTOGRAM:
-			pool[key] = NewHistogram(key, alert)
+			pool[key] = NewHistogram(key)
 		default:
 			log.Error().Msg("Get default")
 
 		}
 	}
-	pool[key].SetAlert(alert)
 	return pool[key]
 }
 
-func NewCounter(name string, alert string) *Counter {
+func NewCounter(name string) *Counter {
 	m := make(map[string]string)
-	if alert != "" {
-		m["alert"] = alert
-	}
-	c := prometheus.NewCounter(
+	c := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name:        name,
-			Help:        "help",
+			Help:        "CounterVec",
 			ConstLabels: m,
-		})
+		},
+		[]string{"alert"},
+	)
 	if c == nil {
 		log.Error().Msg("c == nil")
 	}
@@ -166,44 +95,42 @@ func NewCounter(name string, alert string) *Counter {
 	}
 }
 
-func NewGauge(name string, alert string) *Gauge {
+func NewGauge(name string) *Gauge {
 	m := make(map[string]string)
-	if alert != "" {
-		m["alert"] = alert
-	}
-	c := prometheus.NewGauge(
+	g := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name:        name,
-			Help:        "help",
+			Help:        "GaugeVec",
 			ConstLabels: m,
-		})
-	if c == nil {
+		},
+		[]string{"alert"},
+	)
+	if g == nil {
 		log.Error().Msg("c == nil")
 	}
-	prometheus.MustRegister(c)
+	prometheus.MustRegister(g)
 
 	return &Gauge{
-		g: c,
+		g: g,
 	}
 }
 
-func NewHistogram(name string, alert string) *Histogram {
+func NewHistogram(name string) *Histogram {
 	m := make(map[string]string)
-	if alert != "" {
-		m["alert"] = alert
-	}
-	c := prometheus.NewHistogram(
+	h := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:        name,
-			Help:        "help",
+			Help:        "HistogramVec",
 			ConstLabels: m,
-		})
-	if c == nil {
+		},
+		[]string{"alert"},
+	)
+	if h == nil {
 		log.Error().Msg("c == nil")
 	}
-	prometheus.MustRegister(c)
+	prometheus.MustRegister(h)
 
 	return &Histogram{
-		h: c,
+		h: h,
 	}
 }

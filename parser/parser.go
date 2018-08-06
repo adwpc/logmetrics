@@ -26,9 +26,7 @@ func Monitor(c *conf.Config) {
 	}
 	h := promhttp.Handler()
 	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		metrics.FirstReport()
 		h.ServeHTTP(w, r)
-		metrics.FirstReportNext()
 	})
 
 	log.Fatal().Msg(http.ListenAndServe(c.Listen, nil).Error())
@@ -103,7 +101,7 @@ func RunParseLog(l conf.Log) error {
 				continue
 			}
 			if j.ValKey != "" && j.Type != "" {
-				metrics.Get(j.ValKey, j.Type, j.Alert).Deal(j.ValValue)
+				metrics.Get(j.ValKey, j.Type, j.Alert).Deal(j.ValValue, j.Alert)
 			} else {
 				log.Error().Msg(jsons[i])
 			}
