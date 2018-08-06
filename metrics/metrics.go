@@ -17,8 +17,7 @@ type PromInterface interface {
 }
 
 type Counter struct {
-	c           *prometheus.CounterVec
-	firstReport bool
+	c *prometheus.CounterVec
 }
 
 func (c *Counter) Deal(v float64, alert string) {
