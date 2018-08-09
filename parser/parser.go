@@ -3,6 +3,7 @@ package parser
 import (
 	"errors"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
@@ -65,8 +66,17 @@ func RunParseLog(l conf.Log) error {
 		return errors.New("path == \"\"")
 	}
 
+	var seek *tail.SeekInfo
+	if l.End {
+		seek = &tail.SeekInfo{0, os.SEEK_END}
+	} else {
+		seek = &tail.SeekInfo{0, os.SEEK_SET}
+	}
+
 	tails, err := tail.TailFile(l.Path, tail.Config{
-		ReOpen: true, Follow: true,
+		Location:  seek,
+		ReOpen:    true,
+		Follow:    true,
 		MustExist: false,
 		Poll:      true,
 	})

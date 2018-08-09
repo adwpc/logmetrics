@@ -2,8 +2,10 @@ listen=":8090"
 
 [log.1]
 path="./1.log"
+end=false
 
 [log.2]
 path="./2.log"
+end=true
 
 

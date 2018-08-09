@@ -16,6 +16,7 @@ var (
 
 type Log struct {
 	Path string `mapstructure:"path"`
+	End  bool   `mapstructure:"end"`
 }
 
 type Config struct {
